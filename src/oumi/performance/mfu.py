@@ -49,6 +49,14 @@ _DEVICE_SPECS = {
             torch.bfloat16: 312.0,
         }
     },
+    # (tseligas) patch this so that oumi recognizes the cluster custom gpu's 
+    "NVIDIA A100-SXM-64GB": {
+        _TFLOPS: {
+            torch.float32: 19.5,
+            torch.float16: 312.0,
+            torch.bfloat16: 312.0,
+        }
+    },
     # https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.1.pdf
     "NVIDIA GeForce RTX 3090": {
         _TFLOPS: {
