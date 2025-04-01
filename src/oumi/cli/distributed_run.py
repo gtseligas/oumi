@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import socket
 import copy
 import enum
 import os
@@ -385,6 +386,9 @@ def _detect_skypilot_process_run_info(env: dict[str, str]) -> Optional[_ProcessR
     )
 
 
+def get_hostname():
+    return socket.gethostname().split(".")[0]
+
 def _detect_local_machine_process_run_info(env: dict[str, str]) -> _ProcessRunInfo:
     import torch  # Importing torch takes time so only load it in this scenario.
 
@@ -396,12 +400,20 @@ def _detect_local_machine_process_run_info(env: dict[str, str]) -> _ProcessRunIn
 
     num_gpus_available = torch.cuda.device_count()
     if num_gpus_available > 0:
-        oumi_num_nodes = 1
+        oumi_num_nodes = int(env.get("SLURM_NNODES", "1"))
         oumi_master_address = env.get(_MASTER_ADDR_ENV, _DEFAULT_MASTER_ADDR)
         oumi_master_port = int(env.get(_MASTER_PORT_ENV, _DEFAULT_MASTER_PORT))
-        node_rank = 0
+
+        node_ips = env.get("NODELIST", f"{oumi_master_address}")
+        node_ips = _parse_nodes_str(node_ips)
+        # Assign an increasing rank to each node. The master will take rank 0.
+        ranks = list(range(len(node_ips)))
+        local_rank = 0
+        for node, rank in zip(node_ips, ranks):
+            if get_hostname() == node:
+                local_rank = rank
+        node_rank = local_rank
         gpus_per_node = num_gpus_available
-        node_ips = [oumi_master_address]
         cli_utils.configure_common_env_vars()
     else:
         raise RuntimeError("CUDA available but no GPUs found on local machine!")
